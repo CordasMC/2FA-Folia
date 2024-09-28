@@ -16,7 +16,6 @@
 
 ## Information
 2FA is a Spigot/Paper plugin, with BungeeCord support.
-<br>It is a fork of [Connor Linfoot's MC2FA](https://github.com/ConnorLinfoot/MC2FA).
 
 This plugin adds another layer of protection to your server, by allowing players to use 2FA with an Authenticator app,
 <br>requiring them to enter a time-based generated code when loggin in/changing ips.
@@ -35,6 +34,9 @@ This plugin adds another layer of protection to your server, by allowing players
 You can download 2FA from [Spigot](https://www.spigotmc.org/resources/2-factor-authentication-bungeecord-json-mysql-mongodb.85594/).
 <br>After downloading, simply drag it into your plugins folder and reload the server! <br>
 * If you use BungeeCord, install the plugin in your BungeeCord/plugins/ folder as well!
+
+## Statistics
+For more statistics such as servers using the plugin, locations, server hardware and software etc., please visit [bStats](https://bstats.org/plugin/bukkit/Two%20Factor%20Authentication/9355). 
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
