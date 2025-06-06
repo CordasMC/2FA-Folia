@@ -110,12 +110,13 @@ public abstract class AuthHandler {
      * @return Whether or not the player has a Secret Key
      */
     public boolean is2FAEnabled(@NotNull UUID uuid) {
-        if (!this.authStates.containsKey(uuid)) {
+        AuthState state = this.authStates.get(uuid);
+        if (state == null) {
             return false;
         }
 
-        return this.authStates.get(uuid).equals(AuthState.DEMAND_SETUP)
-                || this.authStates.get(uuid).equals(AuthState.PENDING_LOGIN) || this.authStates.get(uuid).equals(AuthState.AUTHENTICATED);
+        return state.equals(AuthState.DEMAND_SETUP)
+                || state.equals(AuthState.PENDING_LOGIN) || state.equals(AuthState.AUTHENTICATED);
     }
 
     /**
@@ -125,8 +126,11 @@ public abstract class AuthHandler {
      * @return Whether or not the player is pending setup
      */
     public boolean isPendingSetup(@NotNull UUID uuid) {
-        return this.authStates.get(uuid).equals(AuthState.PENDING_SETUP)
-                || this.authStates.get(uuid).equals(AuthState.DEMAND_SETUP);
+        AuthState state = this.authStates.get(uuid);
+        if (state == null) {
+            return false;
+        }
+        return state.equals(AuthState.PENDING_SETUP) || state.equals(AuthState.DEMAND_SETUP);
     }
 
     /**
@@ -152,9 +156,10 @@ public abstract class AuthHandler {
      */
     public boolean validateKey(@NotNull UUID uuid, @NotNull String code) {
         String base32Key = this.getKey(uuid);
+        AuthState state = this.authStates.get(uuid);
 
-        if (base32Key != null && totpService.verify(new TOTP(code), TOTPSecret.Companion.fromBase32EncodedString(base32Key)).isSuccess()
-                && this.authStates.get(uuid).equals(AuthState.PENDING_LOGIN)) {
+        if (base32Key != null && state != null && totpService.verify(new TOTP(code), TOTPSecret.Companion.fromBase32EncodedString(base32Key)).isSuccess()
+                && state.equals(AuthState.PENDING_LOGIN)) {
             this.changeState(uuid, AuthState.AUTHENTICATED);
             return true;
         }
@@ -175,9 +180,10 @@ public abstract class AuthHandler {
         }
 
         String base32Key = this.getPendingKey(uuid);
+        AuthState state = this.authStates.get(uuid);
 
-        if (base32Key != null && totpService.verify(new TOTP(code), TOTPSecret.Companion.fromBase32EncodedString(base32Key)).isSuccess()
-                && (this.authStates.get(uuid).equals(AuthState.PENDING_SETUP) || this.authStates.get(uuid).equals(AuthState.DEMAND_SETUP))) {
+        if (base32Key != null && state != null && totpService.verify(new TOTP(code), TOTPSecret.Companion.fromBase32EncodedString(base32Key)).isSuccess()
+                && (state.equals(AuthState.PENDING_SETUP) || state.equals(AuthState.DEMAND_SETUP))) {
             this.changeState(uuid, AuthState.AUTHENTICATED);
 
             this.getStorageHandler().setKey(uuid, base32Key);
@@ -215,9 +221,10 @@ public abstract class AuthHandler {
      */
     public boolean cancelKey(@NotNull UUID uuid) {
         String key = getPendingKey(uuid);
+        AuthState state = this.authStates.get(uuid);
 
-        if (key != null && (this.authStates.get(uuid).equals(AuthState.PENDING_SETUP)
-                || this.authStates.get(uuid).equals(AuthState.DEMAND_SETUP))) {
+        if (key != null && state != null && (state.equals(AuthState.PENDING_SETUP)
+                || state.equals(AuthState.DEMAND_SETUP))) {
             this.changeState(uuid, AuthState.DISABLED);
 
             this.pendingKeys.remove(uuid);
@@ -234,7 +241,12 @@ public abstract class AuthHandler {
      * @return Whether or not the player needs to authenticate
      */
     public boolean needsToAuthenticate(@NotNull UUID uuid) {
-        return this.is2FAEnabled(uuid) && !this.authStates.get(uuid).equals(AuthState.AUTHENTICATED);
+        if (!this.is2FAEnabled(uuid)) {
+            return false;
+        }
+        
+        AuthState state = this.authStates.get(uuid);
+        return state != null && !state.equals(AuthState.AUTHENTICATED);
     }
 
     /**
