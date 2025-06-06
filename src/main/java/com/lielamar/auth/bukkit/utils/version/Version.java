@@ -10,7 +10,10 @@ public class Version {
     private Version() {
         try {
             this.serverVersion = ServerVersion.valueOf("v" + Bukkit.getServer().getBukkitVersion().split("-")[0].replaceAll("\\.", "_"));
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            // Fallback to the latest known version if parsing fails
+            this.serverVersion = ServerVersion.v1_21_4;
+        }
     }
 
 
@@ -90,7 +93,11 @@ public class Version {
         v1_20_5("v1_20_5", 12005),
         v1_20_6("v1_20_6", 12006),
 
-        v1_21_0("v1_21_0", 12101);
+        v1_21_0("v1_21_0", 12100),
+        v1_21_1("v1_21_1", 12101),
+        v1_21_2("v1_21_2", 12102),
+        v1_21_3("v1_21_3", 12103),
+        v1_21_4("v1_21_4", 12104);
 
         private final String versionName;
         private final int versionId;
