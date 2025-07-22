@@ -5,9 +5,9 @@ import com.lielamar.auth.shared.handlers.AuthHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class AuthCommunicationHandler {
 
@@ -16,7 +16,7 @@ public abstract class AuthCommunicationHandler {
     protected boolean connected;
 
     public AuthCommunicationHandler() {
-        this.callbacks = new HashMap<>();
+        this.callbacks = new ConcurrentHashMap<>();
 
         this.connected = false;
     }

@@ -42,7 +42,7 @@ public class SpigotUpdateChecker implements Listener {
     }
 
     public void checkForUpdates() {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        Bukkit.getAsyncScheduler().runNow(plugin, (task) -> {
             try {
                 HttpsURLConnection connection = (HttpsURLConnection) new URL(String.format(SPIGOT_API, resourceId, "-1")).openConnection();
                 connection.setRequestMethod("GET");
@@ -61,17 +61,20 @@ public class SpigotUpdateChecker implements Listener {
 
             if(versionsBehind < 0) return;
 
-            sendUpdateMessage(Bukkit.getServer().getConsoleSender());
+            // Schedule console message and player notifications on global region scheduler
+            Bukkit.getGlobalRegionScheduler().run(plugin, (syncTask) -> {
+                sendUpdateMessage(Bukkit.getServer().getConsoleSender());
 
-            for(Player pl : Bukkit.getOnlinePlayers())
-                sendUpdateMessage(pl);
+                for(Player pl : Bukkit.getOnlinePlayers())
+                    sendUpdateMessage(pl);
 
-            Bukkit.getPluginManager().registerEvents(new Listener() {
-                @EventHandler (priority = EventPriority.MONITOR)
-                public void onPlayerJoin(PlayerJoinEvent event) {
-                    sendUpdateMessage(event.getPlayer());
-                }
-            }, plugin);
+                Bukkit.getPluginManager().registerEvents(new Listener() {
+                    @EventHandler (priority = EventPriority.MONITOR)
+                    public void onPlayerJoin(PlayerJoinEvent event) {
+                        sendUpdateMessage(event.getPlayer());
+                    }
+                }, plugin);
+            });
         });
     }
 

@@ -11,18 +11,18 @@ import com.lielamar.auth.shared.storage.StorageHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class AuthHandler {
 
-    private final HashMap<UUID, String> pendingKeys;
+    private final Map<UUID, String> pendingKeys;
     private final Map<UUID, Integer> failedAttempts;
 
     protected StorageHandler storageHandler;
     protected AuthCommunicationHandler authCommunicationHandler, fallbackCommunicationHandler;
-    protected HashMap<UUID, AuthState> authStates;
+    protected Map<UUID, AuthState> authStates;
 
     protected final DefaultTOTPService totpService;
     protected final SecretProvider secretProvider;
@@ -37,8 +37,8 @@ public abstract class AuthHandler {
 
     public AuthHandler(@Nullable StorageHandler storageHandler, @Nullable AuthCommunicationHandler authCommunicationHandler,
             @Nullable AuthCommunicationHandler fallbackCommunicationHandler) {
-        this.pendingKeys = new HashMap<>();
-        this.failedAttempts = new HashMap<>();
+        this.pendingKeys = new ConcurrentHashMap<>();
+        this.failedAttempts = new ConcurrentHashMap<>();
         this.secretProvider = new RandomSecretProvider();
         this.totpService = new DefaultTOTPService();
 
@@ -46,7 +46,7 @@ public abstract class AuthHandler {
         this.authCommunicationHandler = authCommunicationHandler;
         this.fallbackCommunicationHandler = fallbackCommunicationHandler;
 
-        this.authStates = new HashMap<>();
+        this.authStates = new ConcurrentHashMap<>();
     }
 
     public @Nullable StorageHandler getStorageHandler() {

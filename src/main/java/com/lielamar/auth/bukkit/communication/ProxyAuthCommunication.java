@@ -30,7 +30,7 @@ public class ProxyAuthCommunication extends AuthCommunicationHandler implements 
         long timeout = this.plugin.getConfigHandler().getCommunicationTimeout();
 
         // Timeouts all callbacks that were set more than ${timeout} seconds ago using #onTimeout
-        Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, () -> {
+        Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, (task) -> {
             long currentTimestamp = System.currentTimeMillis();
 
             List<Map.Entry<UUID, AuthCommunicationCallback>> remove = new ArrayList<>();

@@ -27,20 +27,14 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.map.MapView;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AuthHandler extends com.lielamar.auth.shared.handlers.AuthHandler {
 
@@ -57,7 +51,7 @@ public class AuthHandler extends com.lielamar.auth.shared.handlers.AuthHandler {
 
         this.plugin = plugin;
 
-        this.lastUsedMapIds = new HashMap<>();
+        this.lastUsedMapIds = new ConcurrentHashMap<>();
         Arrays.stream(plugin.getConfigHandler().getMapIDs()).forEach(i -> lastUsedMapIds.put(i, -1L));
 
         this.version = Version.getInstance().getServerVersion();
@@ -83,9 +77,9 @@ public class AuthHandler extends com.lielamar.auth.shared.handlers.AuthHandler {
     public void reloadOnlinePlayers() {
         // Applying 2fa for online players
         // We add at least 1 tick delay, ensuring the permission plugin is loaded beforehand
-        Bukkit.getScheduler().runTaskLater(this.plugin,
-                () -> Bukkit.getOnlinePlayers().forEach(player -> this.playerJoin(player.getUniqueId())),
-                Math.min(1, this.plugin.getConfigHandler().getReloadDelay()));
+        Bukkit.getGlobalRegionScheduler().runDelayed(this.plugin,
+                (task) -> Bukkit.getOnlinePlayers().forEach(player -> this.playerJoin(player.getUniqueId())),
+                Math.max(1, this.plugin.getConfigHandler().getReloadDelay()));
     }
 
     @Override
@@ -203,39 +197,39 @@ public class AuthHandler extends com.lielamar.auth.shared.handlers.AuthHandler {
             return;
         }
 
-        new BukkitRunnable() {
-            final MapView view = getMap(player.getWorld());
+        final MapView view = getMap(player.getWorld());
 
-            @Override
-            public void run() {
-                view.getRenderers().forEach(view::removeRenderer);
+        Bukkit.getAsyncScheduler().runNow(this.plugin, (task) -> {
+            view.getRenderers().forEach(view::removeRenderer);
 
-                try {
-                    ImageRender renderer = new ImageRender(url);
-                    view.addRenderer(renderer);
+            try {
+                ImageRender renderer = new ImageRender(url);
+                view.addRenderer(renderer);
 
-                    ItemStack mapItem;
+                ItemStack mapItem;
 
-                    if (version.above(Version.ServerVersion.v1_13_0)) {
-                        mapItem = new ItemStack(Material.FILLED_MAP);
+                if (version.above(Version.ServerVersion.v1_13_0)) {
+                    mapItem = new ItemStack(Material.FILLED_MAP);
 
-                        if (mapItem.getItemMeta() instanceof MapMeta) {
-                            MapMeta mapMeta = (MapMeta) mapItem.getItemMeta();
-                            if (mapMeta != null) {
-                                mapMeta.setMapId(view.getId());
-                                mapItem.setItemMeta(mapMeta);
-                            }
+                    if (mapItem.getItemMeta() instanceof MapMeta) {
+                        MapMeta mapMeta = (MapMeta) mapItem.getItemMeta();
+                        if (mapMeta != null) {
+                            mapMeta.setMapId(view.getId());
+                            mapItem.setItemMeta(mapMeta);
                         }
-                    } else {
-                        mapItem = new ItemStack(Material.MAP, 1, MapUtils.getMapID(view));
                     }
+                } else {
+                    mapItem = new ItemStack(Material.MAP, 1, MapUtils.getMapID(view));
+                }
 
-                    ItemMeta meta = mapItem.getItemMeta();
-                    if (meta != null) {
-                        meta.setDisplayName(ChatColor.GRAY + "QR Code");
-                        mapItem.setItemMeta(meta);
-                    }
+                ItemMeta meta = mapItem.getItemMeta();
+                if (meta != null) {
+                    meta.setDisplayName(ChatColor.GRAY + "QR Code");
+                    mapItem.setItemMeta(meta);
+                }
 
+                // Schedule the inventory modification on the entity scheduler
+                player.getScheduler().run(this.plugin, (entityTask) -> {
                     // If the inventory is full we don't want to remove any of the player's items, but rather tell them to use the clickable message
                     // to authenticate
                     // otherwise, we want to add the map with the qr code to their first available hotbar slot and move the item in that slot.
@@ -278,12 +272,15 @@ public class AuthHandler extends com.lielamar.auth.shared.handlers.AuthHandler {
                         resetKey(player.getUniqueId());
                         plugin.getMessageHandler().sendMessage(player, MessageHandler.TwoFAMessages.NULL_KEY);
                     }
-                } catch (NumberFormatException exception) {
-                    exception.printStackTrace();
+                }, null);
+            } catch (NumberFormatException exception) {
+                exception.printStackTrace();
+                // Schedule error message on entity scheduler
+                player.getScheduler().run(this.plugin, (entityTask) -> {
                     player.sendMessage(ChatColor.RED + "An error occurred! Is the URL correct?");
-                }
+                }, null);
             }
-        }.runTaskAsynchronously(this.plugin);
+        });
     }
 
     /**
